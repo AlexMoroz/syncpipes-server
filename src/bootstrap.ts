@@ -8,6 +8,8 @@ import { JiraIssueExtractorService } from "./services/jiraIssueExtractor/service
 import { SocioCortexTypesExtractorService } from "./services/scExtractor/service";
 import { SocioCortexLoaderService } from "./services/scLoader/service";
 import { OutlookContactsLoaderService } from "./services/OutlookContactsLoader/service";
+import { JiraProjectExtractorService } from "./services/jiraProjectExtractor/service";
+
 
 // parse .env file
 config({silent: true});
@@ -39,5 +41,6 @@ kernel.loadService(new JiraIssueExtractorService());
 kernel.loadService(new SocioCortexTypesExtractorService());
 kernel.loadService(new OutlookContactsLoaderService());
 kernel.loadService(new SocioCortexLoaderService());
+kernel.loadService(new JiraProjectExtractorService());
 
 export { kernel }

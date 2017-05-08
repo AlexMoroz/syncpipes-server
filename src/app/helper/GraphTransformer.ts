@@ -6,6 +6,7 @@ import { MappingTree } from './MappingTree';
 
 import { ISchema } from "../service/Schema";
 import { IMapping, Mapping } from "../model/Mapping";
+import { writeFile } from 'fs';
 
 interface IDestinationValue {
     to: string;
@@ -53,7 +54,6 @@ export class GraphTransformer {
            // throw new Error('Schema validation error: ' + JSON.stringify(this.sourceSchema.getErrors(), null, '  '));
         // }
         // create graph from input data
-
         let graph = new ObjectGraphNode("_root");
         graph.insert(data);
         // target object
@@ -61,6 +61,10 @@ export class GraphTransformer {
         // iterate over mapping
         for (let group of this.mappingGroups) {
             let toMerge = this.extract(graph.getNodeByPrefix(group.mapping.getName()), group.mapping);
+            //if (group.prefix === "issues") {
+            //    writeFile('./toMerge.json', JSON.stringify(toMerge));
+            //}
+            //console.log(toMerge);
             // merge sub destination object into root destination
             for (let objs of toMerge) {
                 // search for foreign key
@@ -71,6 +75,7 @@ export class GraphTransformer {
                         break;
                     }
                 }
+
                 // fk insert
                 if (fk !== null) {
                     this.insertForeignKey(destObj, objs, group.prefix, fk);
@@ -79,6 +84,7 @@ export class GraphTransformer {
                 }
             }
         }
+        //writeFile('./dest.json', JSON.stringify(destObj));
         return destObj;
     }
 
@@ -164,6 +170,8 @@ export class GraphTransformer {
 
     insertForeignKey(dest: any, objects: Array<IDestinationValue>, path: string, fk: IDestinationValue) {
         // check if the entry exists where the foreignKey points to
+        //console.log(dest);
+        //console.log(".....................");
         let extractPath = '';
         let partsFK = fk.foreignKey.split('/');
         let partsPath = path.split('/');
@@ -281,7 +289,7 @@ export class GraphTransformer {
         }
     }
 
-    extract(graph: Array<ObjectGraphNode>, mappingNode: MappingTree): Array<Array<IDestinationValue>> {
+    extract(graph: Array<ObjectGraphNode>, mappingNode: MappingTree, depth: number = 0): Array<Array<IDestinationValue>> {
         let result = Array<Array<IDestinationValue>>();
         // get direct
         for (let node of graph) {
@@ -290,7 +298,7 @@ export class GraphTransformer {
             if (mappingNode.getChildren() !== null) {
                 for (let childMapping of mappingNode.getChildren()) {
                     let subGraph = node.getNodeByPrefix(childMapping.getName());
-                    let tmp = this.extract(subGraph, childMapping);
+                    let tmp = this.extract(subGraph, childMapping, (depth+1));
                     for (let i = 0; i < tmp.length; i++) {
                         tmp[i] = tmp[i].concat(destObjects);
                         result.push(tmp[i]);

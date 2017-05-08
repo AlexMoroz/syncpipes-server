@@ -1,0 +1,69 @@
+{
+  "id": "http://some.site.somewhere/entry-schema#",
+  "$schema": "http://json-schema.org/draft-054/schema#",
+  "description": "Schema for Jira project extractor",
+  "type": "object",
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrls": {
+            "type": "object",
+            "properties": {
+              "48x48": {
+                "type": "string"
+              },
+              "24x24": {
+                "type": "string"
+              },
+              "16x16": {
+                "type": "string"
+              },
+              "32x32": {
+                "type": "string"
+              }
+            }
+          },
+          "projectCategory": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "projectCategories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+
+}

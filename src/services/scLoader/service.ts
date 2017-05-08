@@ -70,13 +70,10 @@ export class SocioCortexLoaderService implements SyncPipes.ILoaderService {
      * @returns {Promise<SyncPipes.ISchema>}
      */
     getConfigSchema(config): Promise<SyncPipes.ISchema> {
-
         this.setConfiguration(config.config);
         var Client = require('node-rest-client').Client;
         this.client = new Client({ user: this.config.username, password: this.config.password });
         return this.updateSchema();
-
-
     }
 
     updateSchema(): Promise<SyncPipes.ISchema> {
@@ -180,7 +177,7 @@ export class SocioCortexLoaderService implements SyncPipes.ILoaderService {
         this.context = context;
         this.logger = logger;
         var Client = require('node-rest-client').Client;
-        this.client = new Client();
+        this.client = new Client({ user: this.config.username, password: this.config.password });
         return this.updateSchema().then( (schema) => {
             this.schema = schema;
         });
@@ -188,54 +185,175 @@ export class SocioCortexLoaderService implements SyncPipes.ILoaderService {
 
 
     load(): stream.Writable {
-
         this.stream = new stream.Writable({objectMode: true});
+        var workspaceId = "";
+        this.getWorkspaceId().then((wId) => { workspaceId = wId; });
         this.stream._write = (entities, encoding, callback) => {
+            var keys = [];
+            var typeNames = [];
             Object.keys(entities).forEach(function(key) {
-                var val = entities[key];
-
-                for (var i=0; i<val.length; i++){
-                    console.log(val[i]);
-                }
-
+                keys.push(key.toString());
+                typeNames.push(key.toString());
             });
-            //console.log(`Chunk: ${JSON.stringify(entities, null, "  ")}`);
+            this.createEntitiesForType(keys, typeNames, entities, workspaceId).then(() => {
+                callback();
+            }).catch((err) => {
+                this.logger.error(err);
+                callback(err);
+            });
 
-            //for(var i=0; i<chunk.length; i++) {
-            //    console.log(chunk[i]);
-            //}
-//
-//
-//                var itemId = this.getUniqueId(entities[i].url);
-//                var args = {
-//                    data: entities[i],
-//                    headers: { "Content-Type": "application/json" }
-//                };
-//
-//                if(itemId != null)
-//                    entities[i].uniqueId = itemId;
-///*
-//                this.handlePostRequests(this.contactsUrl, args).then((response) => {
-//                    if(response != null) {
-//                        // create new contact
-//                        console.log(response);
-//                    } else {
-//                        // log error
-//                    }
-//                });
-//*/
-
-            callback();
         };
-
+        setTimeout(function() {}, 60000);
         return this.stream;
+    }
+
+    wait(ms): any {
+        var start = new Date().getTime();
+        var end = start;
+        while(end < start + ms) {
+            end = new Date().getTime();
+        }
+    }
+
+    createEntitiesForType(keys, typeNames, entities, workspaceId): Promise<any> {
+        return new Promise<any>((resolve, reject) => {
+            let createEntity = (key, typeNames, entities, workspaceId) => {
+                if (!key) { return Promise.resolve(); }
+
+                this.getType(key, workspaceId).then((type) => {
+                    let typeId = type.id;
+                    let val = entities[key];
+
+                    for(let j=0; j<val.length; j++) {
+                        let jsonObject = val[j];
+                        let entity = {};
+                        entity["name"] = jsonObject.name;
+                        this.eExists(typeId, entity["name"]).then((b) => {
+                            if(!b) {
+                                entity["entityType"] = { "id": typeId };
+                                entity["workspace"] = { "id": workspaceId };
+                                entity["attributes"] = [];
+                                let attributeNames = this.getAttributeNames(type);
+                                //let p = [];
+                                for(var k=0; k<attributeNames.length; k++) {
+                                    var attributeName = attributeNames[k];
+                                    if(jsonObject.hasOwnProperty(attributeName) && attributeName!=="name") {
+                                        let refTypeName = this.typeName(typeNames, attributeName);
+                                        /*if(refTypeName != null) {
+                                         var attributeValue = jsonObject[attributeName];
+                                         this.getType(refTypeName, workspaceId).then((t) => {
+                                         p.push(this.getEntityId(t.id, attributeValue).then((refId) => {
+                                         entity["attributes"].push({"name": attributeName, "values": [refId]});
+                                         }));
+                                         });
+                                         } else { */
+                                        entity["attributes"].push({"name": attributeName, "values": [jsonObject[attributeName]]});
+                                        //}
+                                    }
+                                }
+                                var args = {
+                                    data: entity,
+                                    headers: { "Content-Type": "application/json" }
+                                };
+
+                                this.handlePostRequests(this.config.url + "/entities", args);
+                            } else {
+                                console.log("entity exists");
+                            }
+                        });
+                        //break;
+                    }
+                });
+                createEntity(keys.pop(), typeNames, entities, workspaceId);
+            };
+            createEntity(keys.pop(), typeNames, entities, workspaceId);
+        });
+    }
+
+    typeName(typeNames,name): string {
+        for(let i=0; i<typeNames.length; i++) {
+            let typeName = typeNames[i];
+            if(typeName.toLowerCase() === name.toLowerCase() || this.camelize(typeName) === name) {
+                return typeName;
+            }
+        }
+        return null;
+    }
+
+    camelize(str): string {
+        return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(letter, index) {
+            return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
+        }).replace(/\s+/g, '');
+    }
+
+    eExists(typeId, name): any {
+        return new Promise<any>((resolve, reject) => {
+            var exists = false;
+            this.handleRequests(this.config.url + "/entityTypes/" + typeId +"/entities").then((entities) => {
+                for (let w=0; w<entities.length; w++) {
+                    if(entities[w].name.toLowerCase() === name.toLowerCase().trim()) {
+                        exists = true;
+                        resolve(exists);
+                    }
+                }
+                resolve(exists);
+            });
+        });
+    }
+
+    getEntityId(typeId, name): any {
+        return new Promise<any>((resolve, reject) => {
+            this.handleRequests(this.config.url + "/entityTypes/" + typeId +"/entities").then((entities) => {
+                console.log(typeId);
+                console.log(name);
+                for (let w=0; w<entities.length; w++) {
+                    if(entities[w].name.toLowerCase() === name.toLowerCase().trim()) {
+                        resolve(entities[w].id);
+                    }
+                }
+            });
+        });
+    }
+
+    getAttributeNames(type): any {
+        let names = [];
+        for(let j=0; j<type.attributeDefinitions.length; j++) {
+            names.push(type.attributeDefinitions[j].name);
+        }
+        return names;
+    }
+
+    getWorkspaceId(): Promise {
+        return new Promise<any>((resolve, reject) => {
+            this.handleRequests(this.config.url + "/workspaces").then((workspaces) => {
+                for (let w = 0; w < workspaces.length; w++) {
+                    if (workspaces[w].name.toLowerCase() === this.config.workspace.toLowerCase()) {
+                        resolve(workspaces[w].id);
+                    }
+                }
+            });
+        });
+    }
+
+    getType(typeName, wId): Promise {
+        return new Promise<any>((resolve, reject) => {
+            this.handleRequests(this.config.url + "/workspaces/" + wId + "/entityTypes").then((types) => {
+                for (let i=0; i<types.length; i++) {
+                    if(types[i].name.toLowerCase() === typeName.toLowerCase()) {
+                        this.handleRequests(types[i].href).then((type) => {
+                            resolve(type);
+                        });
+                    }
+                }
+            });
+        });
     }
 
     getUniqueId(url): string {
         if(url != null) {
-            var params = url.split("&");
-            for (var i = 0; i < params.length; i++) {
-                var keyValuePair = params[i].split("=");
+            let params = url.split("&");
+            for (let i = 0; i < params.length; i++) {
+                let keyValuePair = params[i].split("=");
                 if (keyValuePair[0] === "contactId")
                     return keyValuePair[1];
             }

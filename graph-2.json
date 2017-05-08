@@ -1,0 +1,59 @@
+[
+  {
+    "name": "creator",
+    "type": "Node",
+    "children": [
+      {
+        "name": "self",
+        "type": "ObjectGraphLeaf",
+        "value": "https://issues.apache.org/jira/rest/api/2/user?username=kapilsingh5050"
+      },
+      {
+        "name": "name",
+        "type": "ObjectGraphLeaf",
+        "value": "kapilsingh5050"
+      },
+      {
+        "name": "emailAddress",
+        "type": "ObjectGraphLeaf",
+        "value": "kapilsingh5050 at gmail dot com"
+      },
+      {
+        "name": "avatarUrls",
+        "type": "Node",
+        "children": [
+          {
+            "name": "48x48",
+            "type": "ObjectGraphLeaf",
+            "value": "https://issues.apache.org/jira/secure/useravatar?avatarId=10452"
+          },
+          {
+            "name": "24x24",
+            "type": "ObjectGraphLeaf",
+            "value": "https://issues.apache.org/jira/secure/useravatar?size=small&avatarId=10452"
+          },
+          {
+            "name": "16x16",
+            "type": "ObjectGraphLeaf",
+            "value": "https://issues.apache.org/jira/secure/useravatar?size=xsmall&avatarId=10452"
+          },
+          {
+            "name": "32x32",
+            "type": "ObjectGraphLeaf",
+            "value": "https://issues.apache.org/jira/secure/useravatar?size=medium&avatarId=10452"
+          }
+        ]
+      },
+      {
+        "name": "displayName",
+        "type": "ObjectGraphLeaf",
+        "value": "Kapil Singh"
+      },
+      {
+        "name": "active",
+        "type": "ObjectGraphLeaf",
+        "value": true
+      }
+    ]
+  }
+]

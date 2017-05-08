@@ -84,11 +84,11 @@ export class ObjectGraphNode implements IObjectGraph {
                 return <ObjectGraphLeaf>child;
             }
         }
-        for (let child of this.children) {
-            if (child instanceof ObjectGraphNode) {
-                return (child as ObjectGraphNode).getLeafByName(name);
-            }
-        }
+        //for (let child of this.children) {
+        //    if (child instanceof ObjectGraphNode) {
+        //        return (child as ObjectGraphNode).getLeafByName(name);
+        //    }
+        //}
         return null;
     }
 

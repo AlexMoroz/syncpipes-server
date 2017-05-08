@@ -7,7 +7,7 @@ import { Configuration } from './Configuration'
 /**
  * Extracts Issues from a jira org
  */
-export class JiraIssueExtractorService implements SyncPipes.IExtractorService {
+export class JiraProjectExtractorService implements SyncPipes.IExtractorService {
 
     /**
      * Extractor configuration
@@ -64,10 +64,6 @@ export class JiraIssueExtractorService implements SyncPipes.IExtractorService {
             //    username: this.config.username,
             //    token: this.config.token
         });
-        //this.github.authenticate({
-        //    type: "oauth",
-        //    token: this.config.token
-        //});
         return Promise.resolve();
     }
 
@@ -75,14 +71,12 @@ export class JiraIssueExtractorService implements SyncPipes.IExtractorService {
         // create output stream
         this.stream = new stream.Readable({objectMode: true});
         this.stream._read = () => {};
-
-        this.fetchIssuesOfProject();
-
+        this.fetchProjects();
         return this.stream;
     }
 
     getName(): string {
-        return 'jiraIssueExtractor';
+        return 'JiraProjectExtractor';
     }
 
     getConfiguration(): SyncPipes.IServiceConfiguration {
@@ -119,50 +113,37 @@ export class JiraIssueExtractorService implements SyncPipes.IExtractorService {
      *
      *
      */
-    private fetchIssuesOfProject(next: Object = null) {
+    private fetchProjects(next: Object = null) {
         if (this.stream === null) {
             throw new Error('No output stream available');
         } else {
-            Promise.all([this.fetchIssuesForPage(null, [])]).then((issues) => {
-                console.log("resolved");
-                this.stream.push({"issues": issues[0]});
+            Promise.all([this.jira.project.getAllProjects()]).then((p) => {
+                let projects = p[0];
+                let projectCategories = [];
+                for(let i=0; i<projects.length; i++) {
+                    let project = projects[i];
+                    if(project.hasOwnProperty("projectCategory") && this.uniqueCategory(projectCategories, project["projectCategory"])) {
+                        projectCategories.push(project["projectCategory"]);
+                    }
+
+                    if(project.hasOwnProperty("projectCategory")) {
+                        projects[i].projectCategory = project["projectCategory"].name;
+                    }
+                }
+
+                this.stream.push({"projects": projects, "projectCategories": projectCategories});
                 this.stream.push(null);
             }).catch((err) => {
                 console.error(err);
             });
         }
-
     }
 
-    private fetchIssuesForPage(next: Object = null, issues: Array<any> = []): Promise<any> {
-        return new Promise<any>((resolve, reject) => {
-            let fnHandle = (err, _issues) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    // manipulate issues an push to stream
-                    for (let issue of _issues.issues) {
-                        issues.push(issue);
-                    }
-                    var nextPage = _issues.startAt+_issues.maxResults;
-                    //TODO: handle the left issues
-                     if (nextPage<(_issues.total)){
-                         console.log(nextPage);
-                    //if (nextPage<2){
-                        this.fetchIssuesForPage(nextPage, issues);
-                    } else {
-                         console.log("resolve");
-                        resolve(issues);
-                         return;
-                    }
-                }
-            };
-            this.jira.search.search({
-                jql: 'project=' + this.config.project,
-                startAt: next
-            }, fnHandle);
-
-        });
+    uniqueCategory(projectCategories, projectCategory) {
+        for(let i=0; i<projectCategories.length; i++) {
+            if(projectCategories[i].id === projectCategory.id) return false;
+        }
+        return true;
     }
 
     updateConfigSchema(inputData:Array<Buffer>) {

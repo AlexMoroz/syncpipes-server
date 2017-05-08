@@ -1,0 +1,224 @@
+[
+  [
+    {
+      "to": "project_id",
+      "value": "12315420",
+      "unique": false,
+      "primary": false,
+      "foreignKey": ""
+    },
+    {
+      "to": "body",
+      "value": "*Problem Description:*\r\nI have an application in which a lot of if-else decisioning is involved to generate output. I'm getting following exception:\r\nCaused by: org.codehaus.janino.JaninoRuntimeException: Code of method \"(Lorg/apache/spark/sql/catalyst/expressions/GeneratedClass$SpecificUnsafeProjection;Lorg/apache/spark/sql/catalyst/InternalRow;)V\" of class \"org.apache.spark.sql.catalyst.expressions.GeneratedClass$SpecificUnsafeProjection\" grows beyond 64 KB\r\n\tat org.codehaus.janino.CodeContext.makeSpace(CodeContext.java:941)\r\n\tat org.codehaus.janino.CodeContext.write(CodeContext.java:874)\r\n\tat org.codehaus.janino.CodeContext.writeBranch(CodeContext.java:965)\r\n\tat org.codehaus.janino.UnitCompiler.writeBranch(UnitCompiler.java:10261)\r\n\r\n*Steps to Reproduce:*\r\nI've come up with a unit test which I was able to run in CodeGenerationSuite.scala:\r\n{code}\r\ntest(\"split large if expressions into blocks due to JVM code size limit\") {\r\n    val row = create_row(\"afafFAFFsqcategory2dadDADcategory8sasasadscategory24\", 0)\r\n    val inputStr = 'a.string.at(0)\r\n    val inputIdx = 'a.int.at(1)\r\n\r\n    val length = 10\r\n    val valuesToCompareTo = for (i <- 1 to (length + 1)) yield (\"category\" + i)\r\n\r\n    val initCondition = EqualTo(RegExpExtract(inputStr, Literal(\"category1\"), inputIdx), valuesToCompareTo(0))\r\n    var res: Expression = If(initCondition, Literal(\"category1\"), Literal(\"NULL\"))\r\n    var cummulativeCondition: Expression = Not(initCondition)\r\n    for (index <- 1 to length) {\r\n      val valueExtractedFromInput = RegExpExtract(inputStr, Literal(\"category\" + (index + 1).toString), inputIdx)\r\n      val currComparee = If(cummulativeCondition, valueExtractedFromInput, Literal(\"NULL\"))\r\n      val currCondition = EqualTo(currComparee, valuesToCompareTo(index))\r\n      val combinedCond = And(cummulativeCondition, currCondition)\r\n      res = If(combinedCond, If(combinedCond, valueExtractedFromInput, Literal(\"NULL\")), res)\r\n      cummulativeCondition = And(Not(currCondition), cummulativeCondition)\r\n    }\r\n\r\n    val expressions = Seq(res)\r\n    val plan = GenerateUnsafeProjection.generate(expressions, true)\r\n    val actual = plan(row).toSeq(expressions.map(_.dataType))\r\n    val expected = Seq(UTF8String.fromString(\"category2\"))\r\n\r\n    if (!checkResult(actual, expected)) {\r\n      fail(s\"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected\")\r\n    }\r\n  }\r\n{code}\r\n\r\n*Root Cause:*\r\nCurrent splitting of Projection codes doesn't (and can't) take care of splitting the generated code for individual output column expressions. So it can grow to exceed JVM limit.\r\n\r\n*Note:* This issue seems related to SPARK-14887 but I'm not sure whether the root cause is same\r\n \r\n*Proposed Fix:*\r\nIf expression should place it's predicate, true value and false value expressions' generated code in separate methods in context and call these methods instead of putting the whole code directly in its generated code",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "created_at",
+      "value": "2016-10-25T08:02:30.000+0000",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "title",
+      "value": "Deep if expressions cause Generated SpecificUnsafeProjection code to exceed JVM code size limit",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13015002",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ],
+  [
+    {
+      "to": "user",
+      "value": "kapilsingh5050",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13015002",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ],
+  [
+    {
+      "to": "state",
+      "value": "Open",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13015002",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13015002",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ],
+  [
+    {
+      "to": "project_id",
+      "value": "12315420",
+      "unique": false,
+      "primary": false,
+      "foreignKey": ""
+    },
+    {
+      "to": "body",
+      "value": "*Problem Description:*\r\nReading a small parquet file (single column, single record), with provided schema (StructType(Seq(StructField(\"field1\",StringType,true), StructField(\"hour\",StringType,true),StructField(\"batch\",StringType,true)))) and with spark.sql.sources.partitionColumnTypeInference.enabled not set (i.e. defaulting to true) from a path like \"<base-path>/hour=2016072313/batch=720b044894e14dcea63829bb4686c7e3\" gives following exception:\r\njava.lang.NegativeArraySizeException\r\n\tat org.apache.spark.sql.catalyst.expressions.codegen.BufferHolder.grow(BufferHolder.java:45)\r\n\tat org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter.write(UnsafeRowWriter.java:196)\r\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$SpecificUnsafeProjection.apply(Unknown Source)\r\n\tat org.apache.spark.sql.execution.datasources.DataSourceStrategy$$anonfun$17$$anonfun$apply$8.apply(DataSourceStrategy.scala:239)\r\n\tat org.apache.spark.sql.execution.datasources.DataSourceStrategy$$anonfun$17$$anonfun$apply$8.apply(DataSourceStrategy.scala:238)\r\n\tat scala.collection.Iterator$$anon$11.next(Iterator.scala:328)\r\n\tat scala.collection.Iterator$$anon$11.next(Iterator.scala:328)\r\n\tat scala.collection.Iterator$$anon$11.next(Iterator.scala:328)\r\nwhich is completely wrong behavior.\r\n\r\n*Steps to Reproduce:*\r\nRun following commands from Spark shell (after updating paths):\r\n{code}\r\nval df = sc.parallelize(Seq((\"one\", \"2016072313\", \"720b044894e14dcea63829bb4686c7e3\"))).toDF(\"field1\", \"hour\", \"batch\")\r\ndf.write.partitionBy(\"hour\", \"batch\").parquet(\"/home/<user>/SmallParquetForTest\")\r\nimport org.apache.spark.sql.types._\r\nval schema = StructType(Seq(StructField(\"field1\",StringType,true), StructField(\"hour\",StringType,true),StructField(\"batch\",StringType,true)))\r\nval dfRead = sqlContext.read.schema(sparkSchema).parquet(\"file:///home/<user>/SmallParquetForTest\")\r\ndfRead.show()\r\n{code}\r\n\r\n*Root Cause:*\r\nI did some analysis by debugging this in Spark and found out that the partition Projection uses inferred schema and generates a row with \"hour\" as integer. Later on final projection uses provided schema and reads \"hour\" as string from the row generated by partition projection. While reading \"hour\" as string, it's integer value 2016072313 is interpreted as size of the string to be read which causes byte buffer size overflow.\r\n\r\n*Expected Behavior:*\r\nEither there should be an error saying inferred type and provided type for partition columns do not match or provided type should be used while generating partition projection.",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "created_at",
+      "value": "2016-10-25T06:30:24.000+0000",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "title",
+      "value": "NegativeArraySize exception while reading parquet when inferred type and provided type for partition column are different",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13014991",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ],
+  [
+    {
+      "to": "user",
+      "value": "kapilsingh5050",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13014991",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ],
+  [
+    {
+      "to": "state",
+      "value": "Open",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "github_id",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "number",
+      "value": "13014991",
+      "unique": false,
+      "primary": false,
+      "foreignKey": null
+    },
+    {
+      "to": "id",
+      "value": "13014991",
+      "unique": true,
+      "primary": true,
+      "foreignKey": null
+    }
+  ]
+]

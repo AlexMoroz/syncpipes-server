@@ -107,7 +107,7 @@ export class PureIssueLoaderService implements SyncPipes.ILoaderService {
     load(): stream.Writable {
         this.stream = new stream.Writable({objectMode: true});
         this.stream._write = (chunk, encoding, callback) => {
-            console.log(`Chunk: ${JSON.stringify(chunk, null, "  ")}`);
+            //console.log(`Chunk: ${JSON.stringify(chunk, null, "  ")}`);
 
             this.insertProjects(chunk.projects)
                 .then(() => this.insertIssues(chunk.issues))
